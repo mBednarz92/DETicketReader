@@ -48,9 +48,21 @@ namespace DETicketReader
                     try
                     {
                         // Read the Tag
-                        byte tag = (byte)stream.ReadByte();
+                        ushort tag;  // using ushort to accommodate 2-byte tags
+
+                        byte tag1 = (byte)stream.ReadByte();
+
+                        if (tag1 == 0x7F && stream.Position < stream.Length && (byte)stream.ReadByte() == 0x21)
+                        {
+                            tag = 0x7F21; // Combined two-byte tag
+                        }
+                        else
+                        {
+                            tag = tag1;  // Single-byte tag
+                        }
+
                         Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine($"Tag: {tag:X2}");
+                        Console.WriteLine($"Tag: {tag:X4}"); // Adjusted for possible 4 character output
 
                         if (stream.Position == stream.Length)
                         {
@@ -63,6 +75,7 @@ namespace DETicketReader
                         // Read the Length
                         byte lengthIndicator = (byte)stream.ReadByte();
                         int length = lengthIndicator;
+
                         if (lengthIndicator == 0x81)
                         {
                             if (stream.Position == stream.Length)
