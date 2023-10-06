@@ -4,7 +4,7 @@ Console App to decrypt VDV tickets (currently only reading and separating TLV bo
 ## Input Data
 
 - CACertificate - String value containings certificate from external source
-- Input data - String Value of data, must be in hex format and hex sould be separated by space. 
+- InputData - String Value of data, must be in hex format and hex sould be separated by space. 
 
 Example:
 
