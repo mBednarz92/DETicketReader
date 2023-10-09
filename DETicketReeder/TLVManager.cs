@@ -150,9 +150,94 @@ namespace DETicketReader
 
         public void ShowOrganizedData()
         {
-            foreach(VDVSignedTicket signedTicket in vdvSignedTicketsArray)
+            using (MemoryStream stream = new MemoryStream(tlvData))
             {
-                Console.WriteLine();
+                while (stream.Position < stream.Length)
+                {
+                    try
+                    {
+                        // Read the Tag
+                        ushort tag;  // using ushort to accommodate 2-byte tags
+
+                        byte tag1 = (byte)stream.ReadByte();
+
+                        if (tag1 == 0x7F && stream.Position < stream.Length && (byte)stream.ReadByte() == 0x21)
+                        {
+                            tag = 0x7F21; // Combined two-byte tag
+
+                        }
+                        else
+                        {
+                            tag = tag1;  // Single-byte tag
+                        }
+
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"Tag: {tag:X4}"); // Adjusted for possible 4 character output
+
+                        if (stream.Position == stream.Length)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine("Error: Missing length and value after tag.");
+                            Console.ResetColor();
+                            break;
+                        }
+
+                        // Read the Length
+                        byte lengthIndicator = (byte)stream.ReadByte();
+                        int length = lengthIndicator;
+
+                        if (lengthIndicator == 0x81)
+                        {
+                            if (stream.Position == stream.Length)
+                            {
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.WriteLine("Error: Missing extended length byte.");
+                                Console.ResetColor();
+                                break;
+                            }
+                            length = stream.ReadByte();
+                        }
+                        else if (lengthIndicator == 0x82)
+                        {
+                            if (stream.Length - stream.Position < 2)
+                            {
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.WriteLine("Error: Missing some extended length bytes.");
+                                Console.ResetColor();
+                                break;
+                            }
+                            length = (stream.ReadByte() << 8) + stream.ReadByte();
+                        }
+
+                        Console.ForegroundColor = ConsoleColor.Blue;
+                        Console.WriteLine($"Length: {length}");
+
+                        if (stream.Length - stream.Position < length)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine($"Error: Not enough bytes remain in the stream for the declared length of {length} bytes.");
+                            var remaining = new byte[stream.Length - stream.Position];
+                            stream.Read(remaining, 0, remaining.Length);
+                            Console.WriteLine($"Remaining data (possibly corrupt or incomplete): {BitConverter.ToString(remaining).Replace("-", " ")}");
+                            Console.ResetColor();
+                            break;
+                        }
+
+                        // Read the Value
+                        byte[] value = new byte[length];
+                        stream.Read(value, 0, length);
+                        Console.ResetColor();
+                        Console.WriteLine("Value: ");
+                        PrintBytesInRows(value);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"Error: {ex.Message}");
+                        Console.ResetColor();
+                        break;
+                    }
+                }
             }
         }
 
