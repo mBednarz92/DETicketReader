@@ -36,7 +36,7 @@ namespace DETicketReader
                 {
                     try
                     {
-                        // Read the Tag
+                        // Tag
                         ushort tag;  // using ushort to accommodate 2-byte tags
 
                         byte tag1 = (byte)stream.ReadByte();
@@ -59,7 +59,7 @@ namespace DETicketReader
                             break;
                         }
 
-                        // Read the Length
+                        // Length
                         byte lengthIndicator = (byte)stream.ReadByte();
                         int length = lengthIndicator;
 
@@ -98,7 +98,7 @@ namespace DETicketReader
                             break;
                         }
 
-                        // Read the Value
+                        // Value
                         byte[] value = new byte[length];
                         stream.Read(value, 0, length);
                         if (tag == 0x9e)
