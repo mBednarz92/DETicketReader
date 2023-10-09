@@ -18,10 +18,13 @@ while(menuOption != "Exit")
         .Title("Menu:")
         .PageSize(10)
         .AddChoices(new[] {
-            "Show Raw Data", "Show Organized Data(TLV)", "Exit"
+            "Decode", "Show Raw Data", "Show Organized Data(TLV)",  "Exit"
         }));
     switch (menuOption)
     {
+        case "Decode":
+            Console.WriteLine("Not implemented1");
+            break;
         case "Show Raw Data":
             tlvM.ShowRawData();
             break;

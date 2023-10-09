@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DETicketReader.Models;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -12,6 +13,7 @@ namespace DETicketReader
     public class TLVManager
     {
         byte[] tlvData;
+        List<VDVSignedTicket> vdvSignedTicketsArray = new List<VDVSignedTicket>();
 
         public TLVManager()
         {
@@ -20,19 +22,126 @@ namespace DETicketReader
             string ticketHexString = rm.GetString("InputData", CultureInfo.CurrentCulture);
             string[] ticketHexValues = ticketHexString.Split(new char[] { ' ' });
 
+
             tlvData = new byte[ticketHexValues.Length];
             for (int i = 0; i < ticketHexValues.LongLength; i++)
             {
                 tlvData[i] = Convert.ToByte(ticketHexValues[i], 16);
             }
 
+            VDVSignedTicket tempVDVTicket = new VDVSignedTicket();
+
+            using (MemoryStream stream = new MemoryStream(tlvData))
+                while (stream.Position < stream.Length)
+                {
+                    try
+                    {
+                        // Read the Tag
+                        ushort tag;  // using ushort to accommodate 2-byte tags
+
+                        byte tag1 = (byte)stream.ReadByte();
+
+                        if (tag1 == 0x7F && stream.Position < stream.Length && (byte)stream.ReadByte() == 0x21)
+                        {
+                            tag = 0x7F21; // Combined two-byte tag
+
+                        }
+                        else
+                        {
+                            tag = tag1;  // Single-byte tag
+                        }
+
+                        if (stream.Position == stream.Length)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine("Error: Missing length and value after tag.");
+                            Console.ResetColor();
+                            break;
+                        }
+
+                        // Read the Length
+                        byte lengthIndicator = (byte)stream.ReadByte();
+                        int length = lengthIndicator;
+
+                        if (lengthIndicator == 0x81)
+                        {
+                            if (stream.Position == stream.Length)
+                            {
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.WriteLine("Error: Missing extended length byte.");
+                                Console.ResetColor();
+                                break;
+                            }
+                            length = stream.ReadByte();
+                        }
+                        else if (lengthIndicator == 0x82)
+                        {
+                            if (stream.Length - stream.Position < 2)
+                            {
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.WriteLine("Error: Missing some extended length bytes.");
+                                Console.ResetColor();
+                                break;
+                            }
+                            length = (stream.ReadByte() << 8) + stream.ReadByte();
+                        }
+
+
+                        if (stream.Length - stream.Position < length)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine($"Error: Not enough bytes remain in the stream for the declared length of {length} bytes.");
+                            var remaining = new byte[stream.Length - stream.Position];
+                            stream.Read(remaining, 0, remaining.Length);
+                            Console.WriteLine($"Remaining data (possibly corrupt or incomplete): {BitConverter.ToString(remaining).Replace("-", " ")}");
+                            Console.ResetColor();
+                            break;
+                        }
+
+                        // Read the Value
+                        byte[] value = new byte[length];
+                        stream.Read(value, 0, length);
+                        if (tag == 0x9e)
+                        {
+                            tempVDVTicket.Tag9EValueData = value;
+                        }
+                        else if (tag == 0x9a)
+                        {
+                            tempVDVTicket.Tag9AValueData = value;
+                        }
+
+                        if (tempVDVTicket.Tag9AValueData != null && tempVDVTicket.Tag9EValueData != null)
+                        {
+                            vdvSignedTicketsArray.Append(tempVDVTicket);
+                        }
+
+
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"Error: {ex.Message} {ex.Source}");
+                        Console.ResetColor();
+                        break;
+                    }
+                }
         }
+
+
+
         public void ShowRawData()
         {
             string[] hexString = BitConverter.ToString(tlvData).Split('-');
+            int currentColumn = 0;
 
             foreach (string b in hexString)
             {
+                if (currentColumn == 16)
+                {
+                    currentColumn = 0;
+                    Console.WriteLine("");
+                }
+                currentColumn++;
                 Console.Write(" " + b);
             }
 
@@ -55,6 +164,7 @@ namespace DETicketReader
                         if (tag1 == 0x7F && stream.Position < stream.Length && (byte)stream.ReadByte() == 0x21)
                         {
                             tag = 0x7F21; // Combined two-byte tag
+
                         }
                         else
                         {
@@ -117,7 +227,8 @@ namespace DETicketReader
                         byte[] value = new byte[length];
                         stream.Read(value, 0, length);
                         Console.ResetColor();
-                        Console.WriteLine($"Value: {BitConverter.ToString(value).Replace("-", " ")}");
+                        Console.WriteLine("Value: ");
+                        PrintBytesInRows(value);
                     }
                     catch (Exception ex)
                     {
@@ -129,7 +240,25 @@ namespace DETicketReader
                 }
             }
         }
+
+        private static void PrintBytesInRows(byte[] bytes)
+        {
+            int bytesPerRow = 16; // max number of bytes to print in a row
+
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                // Print byte in hexadecimal format
+                Console.Write($"{bytes[i]:X2} ");
+
+                // Insert newline after every bytesPerRow bytes, or at end of byte array
+                if ((i + 1) % bytesPerRow == 0 || i == bytes.Length - 1)
+                {
+                    Console.WriteLine();
+                }
+            }
+        }
     }
 }
-                 
+
+                     
 
