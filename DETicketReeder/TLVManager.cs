@@ -12,8 +12,8 @@ namespace DETicketReader
 {
     public class TLVManager
     {
-        byte[] tlvData;
-        List<VDVSignedTicket> vdvSignedTicketsArray = new List<VDVSignedTicket>();
+        public byte[] tlvData;
+        public List<VDVSignedTicket> vdvSignedTicketsArray = new List<VDVSignedTicket>();
 
         public TLVManager()
         {
@@ -29,7 +29,11 @@ namespace DETicketReader
                 tlvData[i] = Convert.ToByte(ticketHexValues[i], 16);
             }
 
-            VDVSignedTicket tempVDVTicket = new VDVSignedTicket();
+            VDVSignedTicket tempVDVTicket = new VDVSignedTicket()
+            {
+                Tag9EValueData = new byte[0],
+                Tag9AValueData = new byte[0]
+            };
 
             using (MemoryStream stream = new MemoryStream(tlvData))
                 while (stream.Position < stream.Length)
@@ -104,15 +108,23 @@ namespace DETicketReader
                         if (tag == 0x9e)
                         {
                             tempVDVTicket.Tag9EValueData = value;
+                            Console.WriteLine("Tag 9E Value Imported");
                         }
                         else if (tag == 0x9a)
                         {
                             tempVDVTicket.Tag9AValueData = value;
+                            Console.WriteLine("Tag 9A Value Imported");
                         }
 
-                        if (tempVDVTicket.Tag9AValueData != null && tempVDVTicket.Tag9EValueData != null)
+                        if (tempVDVTicket.Tag9AValueData.Length > 0 && tempVDVTicket.Tag9EValueData.Length > 0)
                         {
-                            vdvSignedTicketsArray.Append(tempVDVTicket);
+                            vdvSignedTicketsArray.Add(tempVDVTicket);
+                            Console.WriteLine("Ticket object created");
+                            tempVDVTicket = new VDVSignedTicket()
+                            {
+                                Tag9EValueData = new byte[0],
+                                Tag9AValueData = new byte[0]
+                            };
                         }
 
 

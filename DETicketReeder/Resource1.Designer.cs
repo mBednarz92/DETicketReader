@@ -61,13 +61,14 @@ namespace DETicketReader {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to fyGCAe1fToHtA0VVVkRWGAMGAAAAAERFVkRWFQERVkRWX0tBMCAhEDAqhkiG
-        /// 9w0BAQW3QS8doo5ABtrsqzq4KAgB7wf2DmcFeleRyuQlMpdktFVoNJ3ss7DVWjuPUy1eJexk0uF
-        /// 38+fA27p0lzqpk4+BSeaqekPky5m0VI9rgDpSurXMrwui0LXOCB8ohCPfHx8d/iqTKyAU6vNy2L
-        /// APB7889HuZRbouyahVUItnrocmy71Z6gpFXxemjk63s8aOfOiymLaNYcdn4uLQO5otfRaCbMJgO
-        /// zjbBnOqMRi9hSpeZPp/YHyINb1LALNyBcAXKdcAAQABXzeB+BnkoBGxvyrgG91O4EyY5Q/WG3ra
-        /// 5DBcuoNL8Y+88EhjKxnaI5ImuRgKOqmnZkgTEb9BRLHLF4ln8EFe03SEs2ht6vy7xHWA5SXR3b6
-        /// C3YyrtZVWAvYqL0uE0hoUAjFOEyVIpnVMD9HCv3SrkBJ86F31zckF9Bs39c [rest of string was truncated]&quot;;.
+        ///   Looks up a localized string similar to MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA2QpgREDTsrDAyO57yEAz
+        ///W3YYKYVnzFlS2OZO4sw1bAa73JGidioLkp4Y/s1PZ7kopm+x1RD40UT7x/9+bZWg
+        ///DDuO4Nph5opbJkZIS/83qxNzP2axnlrkf8b8iRYdHr+Ul0nNhlax4EwAWK1SgXtL
+        ///eGuhpV1rJD+pMomPfkh/gpHcxDBfujJH3bbCr536XAROyDv8Qww20JfjtnoTGkWH
+        ///dgM2GRn6XoDvnd3YSEZpL2nUNIT20+c9MjbwaCcJ93VFpeIMTCXVbvKre/Se45Fa
+        ///k2zOaTyfdC40fgdf93UrVR475EN4FHMMgFVQmZPbGTjirIlVxRcSdk5pTVRqrlsF
+        ////A9fhtdOPUCoSXXHClf9V3Ef1sSlzhVAReVAX3GGwRt2Tq8HrOMq+o9Fgxgl1WC3
+        ///NbHUI2x3EmyPID1PKbXLw4tpNjngDotCG96QsdC85zF6C9H5yO [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string CACertificate {
             get {

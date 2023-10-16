@@ -7,6 +7,7 @@ AnsiConsole.Write(
         .Color(Color.Green));
 
 TLVManager tlvM = new TLVManager();
+RSADecryptor decryptor= new RSADecryptor();
 
 string menuOption = ""; 
 
@@ -23,7 +24,8 @@ while(menuOption != "Exit")
     switch (menuOption)
     {
         case "Decode":
-            Console.WriteLine("Not implemented1");
+            Console.WriteLine(tlvM.vdvSignedTicketsArray.Count());
+            Console.WriteLine(decryptor.GetDecryptedData(tlvM.tlvData));
             break;
         case "Show Raw Data":
             tlvM.ShowRawData();
