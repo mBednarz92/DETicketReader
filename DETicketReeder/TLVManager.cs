@@ -32,7 +32,8 @@ namespace DETicketReader
             VDVSignedTicket tempVDVTicket = new VDVSignedTicket()
             {
                 Tag9EValueData = new byte[0],
-                Tag9AValueData = new byte[0]
+                Tag9AValueData = new byte[0],
+                Tag7F21ValueData = new byte[0]  
             };
 
             using (MemoryStream stream = new MemoryStream(tlvData))
@@ -108,22 +109,28 @@ namespace DETicketReader
                         if (tag == 0x9e)
                         {
                             tempVDVTicket.Tag9EValueData = value;
-                            Console.WriteLine("Tag 9E Value Imported");
+                            Console.WriteLine("Tag 9E Value (Signature) Imported");
                         }
                         else if (tag == 0x9a)
                         {
                             tempVDVTicket.Tag9AValueData = value;
-                            Console.WriteLine("Tag 9A Value Imported");
+                            Console.WriteLine("Tag 9A Value (SignatureRemainder) Imported");
+                        }
+                        else if (tag == 0x7F21)
+                        {
+                            tempVDVTicket.Tag7F21ValueData = value;
+                            Console.WriteLine("Tag 7F21 Value (CV Certificate) Imported");
                         }
 
-                        if (tempVDVTicket.Tag9AValueData.Length > 0 && tempVDVTicket.Tag9EValueData.Length > 0)
+                        if (tempVDVTicket.Tag9AValueData.Length > 0 && tempVDVTicket.Tag9EValueData.Length > 0 && tempVDVTicket.Tag7F21ValueData.Length > 0)
                         {
                             vdvSignedTicketsArray.Add(tempVDVTicket);
                             Console.WriteLine("Ticket object created");
                             tempVDVTicket = new VDVSignedTicket()
                             {
                                 Tag9EValueData = new byte[0],
-                                Tag9AValueData = new byte[0]
+                                Tag9AValueData = new byte[0],
+                                Tag7F21ValueData = new byte[0]                                
                             };
                         }
 

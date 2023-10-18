@@ -5,6 +5,8 @@ using System.Resources;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using DETicketReader.Models;
+using Org.BouncyCastle.Asn1.Ocsp;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Digests;
 using Org.BouncyCastle.Crypto.Encodings;
@@ -15,23 +17,24 @@ using Org.BouncyCastle.Security;
 using Org.BouncyCastle.Utilities.IO.Pem;
 using Org.BouncyCastle.X509;
 using PemReader = Org.BouncyCastle.OpenSsl.PemReader;
+using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
 namespace DETicketReader
 {
-    public class RSADecryptor
+    public class VDVDataDecryptor
     {
         private string sigM;
         private byte[] decryptedData;
         private string [] fileNames;
 
         ResourceManager rm = new ResourceManager("DETicketReader.Resource1", Assembly.GetExecutingAssembly());
-        
+        X509CertificateParser certificateParser = new X509CertificateParser();
 
-        void DecryptData(byte[] sigM)
+        void DecryptData(VDVSignedTicket ticket)
         {
             try
             {
-                string folderPath = @"C:\SKIDATA\Bin\Extensions\CCS\BZB\certificates";
+                string folderPath = @"C:\SKIDATA\Bin\Extensions\CCS\BZB\certificates\Keys";
                 fileNames = Directory.GetFiles(folderPath);
 
                 Console.ForegroundColor = ConsoleColor.Blue;
@@ -53,46 +56,41 @@ namespace DETicketReader
             {
                 
                 Console.WriteLine($"Current iteration: {currentItteration+1}");
-                AsymmetricKeyParameter publicKey = LoadPublicKey($"{fileNames[currentItteration]}");
+                byte[] caCertificateBytes = LoadCertificate($"{fileNames[currentItteration]}");
+                foreach (byte b in caCertificateBytes)
+                {
+                    Console.Write($"{b:X2} ");
+                }
+
+                X509Certificate caCertificate = certificateParser.ReadCertificate(caCertificateBytes);
+                Console.WriteLine(caCertificate.SubjectDN);
+                AsymmetricKeyParameter publicKey =  caCertificate.GetPublicKey();
+                X509Certificate cvCertificate = certificateParser.ReadCertificate(ticket.Tag7F21ValueData);
+                
+                byte[] recoveredMessage;
+
 
                 if (publicKey != null)
                 {
                     try
                     {
+                  
+                            cvCertificate.Verify(publicKey);
 
-                        // Encrypt the data
-                        byte[] encryptedData = EncryptData(publicKey, sigM);
+                        ISigner verifier = SignerUtilities.GetSigner("ISO9796-2");
 
-                        if(encryptedData.Length > 0)
-                        {
-                            // Example: Convert encrypted data to Base64 and print
-                            string base64EncryptedData = Convert.ToBase64String(encryptedData);
+                        verifier.Init(false, cvCertificate.GetPublicKey());
 
-                            byte[] byteData = Convert.FromBase64String(base64EncryptedData);
+                        verifier.BlockUpdate(ticket.Tag9AValueData, 0, ticket.Tag9AValueData.Length);
+                        recoveredMessage = verifier.GenerateSignature();
 
-                            // Convert the byte array to a hexadecimal string
-                            string hexString = BitConverter.ToString(byteData).Replace("-", string.Empty);
+                        // Display the hexadecimal string
+                        Console.ForegroundColor = ConsoleColor.Blue;
+                        Console.WriteLine("recoveredMessage:");
+                        Console.ResetColor();
+                        Console.WriteLine(recoveredMessage);
 
-                            // Display the hexadecimal string
-                            Console.ForegroundColor = ConsoleColor.Blue;
-                            Console.WriteLine("Encrypted data in Base64:");
-                            Console.WriteLine();
-                            Console.WriteLine(base64EncryptedData);
-                            Console.ForegroundColor = ConsoleColor.Green;
-                            Console.WriteLine();
-                            Console.WriteLine("Encrypted data in Hexadecimal:");
-                            Console.WriteLine();
-                            Console.WriteLine(hexString);
-                            Console.ResetColor();
-                        } 
-                        else
-                        {
-                            Console.ForegroundColor = ConsoleColor.Red;
-                            Console.WriteLine("Wrong public key");
-                            Console.ResetColor();
-                        }
 
-                        
                     }
                     catch (CryptographicException cryptoEx)
                     {
@@ -125,27 +123,19 @@ namespace DETicketReader
            
         }
 
-        public byte[] GetDecryptedData(byte[] sigM)
+        public byte[] GetDecryptedData(VDVSignedTicket vdvTicket)
         {
-            DecryptData(sigM);
+            DecryptData(vdvTicket);
             return decryptedData;
         }
 
-        static AsymmetricKeyParameter LoadPublicKey(string pemFilePath)
+        public byte[] LoadCertificate(string pemFilePath)
         {
-            using (var reader = File.OpenText(pemFilePath))
+            using (var reader = File.OpenRead(pemFilePath))
             {
-                var pemReader = new PemReader(reader);
-                var certificate = (Org.BouncyCastle.X509.X509Certificate)pemReader.ReadObject();
-                if (certificate == null)
-                {
-                    throw new InvalidOperationException("Could not read the certificate from the PEM file. Ensure the PEM file is a valid certificate.");
-                }
-                else
-                {
-                    Console.WriteLine(certificate.ToString());
-                }
-                return certificate.GetPublicKey();
+                byte[] rawData = new byte[reader.Length];
+                reader.Read(rawData, 0, (int)reader.Length);
+                return rawData;
             }
         }
 

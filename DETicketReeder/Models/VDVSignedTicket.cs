@@ -10,6 +10,7 @@ namespace DETicketReader.Models
     {
         public byte[] Tag9EValueData { get; set; }
         public byte[] Tag9AValueData { get; set; }
+        public byte[] Tag7F21ValueData { get; set; }
     }
 
     
