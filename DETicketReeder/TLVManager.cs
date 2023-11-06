@@ -33,7 +33,8 @@ namespace DETicketReader
             {
                 Tag9EValueData = new byte[0],
                 Tag9AValueData = new byte[0],
-                Tag7F21ValueData = new byte[0]  
+                Tag7F21ValueData = new byte[0],
+                Tag42ValueData= new byte[0]
             };
 
             using (MemoryStream stream = new MemoryStream(tlvData))
@@ -121,8 +122,13 @@ namespace DETicketReader
                             tempVDVTicket.Tag7F21ValueData = value;
                             Console.WriteLine("Tag 7F21 Value (CV Certificate) Imported");
                         }
+                        else if (tag == 0x42)
+                        {
+                            tempVDVTicket.Tag42ValueData = value;
+                            Console.WriteLine("Tag 42 Value (CAR) Imported");
+                        }
 
-                        if (tempVDVTicket.Tag9AValueData.Length > 0 && tempVDVTicket.Tag9EValueData.Length > 0 && tempVDVTicket.Tag7F21ValueData.Length > 0)
+                        if (tempVDVTicket.Tag9AValueData.Length > 0 && tempVDVTicket.Tag9EValueData.Length > 0 && tempVDVTicket.Tag7F21ValueData.Length > 0 && tempVDVTicket.Tag42ValueData.Length > 0)
                         {
                             vdvSignedTicketsArray.Add(tempVDVTicket);
                             Console.WriteLine("Ticket object created");
@@ -130,7 +136,8 @@ namespace DETicketReader
                             {
                                 Tag9EValueData = new byte[0],
                                 Tag9AValueData = new byte[0],
-                                Tag7F21ValueData = new byte[0]                                
+                                Tag7F21ValueData = new byte[0],
+                                Tag42ValueData = new byte[0]                                
                             };
                         }
 

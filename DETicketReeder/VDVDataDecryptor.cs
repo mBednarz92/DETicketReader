@@ -6,16 +6,22 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using DETicketReader.Models;
+using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Asn1.Ocsp;
+using Org.BouncyCastle.Asn1.X509;
+using Org.BouncyCastle.Asn1.X9;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Digests;
 using Org.BouncyCastle.Crypto.Encodings;
 using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Generators;
+using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.Crypto.Signers;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.Utilities.IO.Pem;
 using Org.BouncyCastle.X509;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 using PemReader = Org.BouncyCastle.OpenSsl.PemReader;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
@@ -25,103 +31,83 @@ namespace DETicketReader
     {
         private string sigM;
         private byte[] decryptedData;
-        private string [] fileNames;
+        private string fileNames;
+        string caCertificateFilePath;
 
-        ResourceManager rm = new ResourceManager("DETicketReader.Resource1", Assembly.GetExecutingAssembly());
-        X509CertificateParser certificateParser = new X509CertificateParser();
+        
+        
 
         void DecryptData(VDVSignedTicket ticket)
         {
             try
             {
-                string folderPath = @"C:\SKIDATA\Bin\Extensions\CCS\BZB\certificates\Keys";
-                fileNames = Directory.GetFiles(folderPath);
+                if (ticket == null)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Ticket object is null");
+                    Console.ResetColor();
+                    return;
+                }
+
+                if (ticket.Tag42ValueData == null)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("No CAR TAG in the ticket");
+                    Console.ResetColor();
+                    return;
+                }
+                string folderPath = @"C:\SKIDATA\Bin\Extensions\CCS\BZB\certificates\Keys\";
+                string keyFileName = BitConverter.ToString(ticket.Tag42ValueData).Replace("-", "") + ".vdv-cert";
+                caCertificateFilePath = Path.Combine(folderPath, keyFileName);
 
                 Console.ForegroundColor = ConsoleColor.Blue;
-                Console.WriteLine("Certificates files in folder: ");
+                Console.WriteLine(folderPath + keyFileName);
                 Console.ResetColor();
-                foreach (string fileName in fileNames)
-                {
-                    Console.WriteLine(Path.GetFileName(fileName));
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("An error occurred: " + e.Message);
-            }
 
-            int currentItteration = 0;
-
-            while (decryptedData == null && currentItteration <= fileNames.Length - 1)
-            {
-                
-                Console.WriteLine($"Current iteration: {currentItteration+1}");
-                byte[] caCertificateBytes = LoadCertificate($"{fileNames[currentItteration]}");
+                //Geting Raw CA certificate data
+                Console.WriteLine($"CA Certificate Raw Data: ");
+                byte[] caCertificateBytes = LoadCertificate(caCertificateFilePath);
                 foreach (byte b in caCertificateBytes)
                 {
                     Console.Write($"{b:X2} ");
                 }
 
-                X509Certificate caCertificate = certificateParser.ReadCertificate(caCertificateBytes);
-                Console.WriteLine(caCertificate.SubjectDN);
-                AsymmetricKeyParameter publicKey =  caCertificate.GetPublicKey();
-                X509Certificate cvCertificate = certificateParser.ReadCertificate(ticket.Tag7F21ValueData);
                 
-                byte[] recoveredMessage;
 
+                // Assuming it's an RSA public key
+                
 
-                if (publicKey != null)
-                {
-                    try
-                    {
-                  
-                            cvCertificate.Verify(publicKey);
+                VdvCertificate vdvCertificate = new VdvCertificate(caCertificateBytes);
 
-                        ISigner verifier = SignerUtilities.GetSigner("ISO9796-2");
+                Console.WriteLine(vdvCertificate.GetModulus());
+                Console.WriteLine(vdvCertificate.GetExponent());
 
-                        verifier.Init(false, cvCertificate.GetPublicKey());
+                RsaKeyParameters rsaKeyParameters = new RsaKeyParameters(
+                    false,
+                    vdvCertificate.GetModulus(),
+                    vdvCertificate.GetExponent()
+                );
 
-                        verifier.BlockUpdate(ticket.Tag9AValueData, 0, ticket.Tag9AValueData.Length);
-                        recoveredMessage = verifier.GenerateSignature();
+                // Create the signer with ISO9796-2 scheme
+                var signer = new Iso9796d2Signer(new RsaEngine(), new Sha1Digest(), true);
 
-                        // Display the hexadecimal string
-                        Console.ForegroundColor = ConsoleColor.Blue;
-                        Console.WriteLine("recoveredMessage:");
-                        Console.ResetColor();
-                        Console.WriteLine(recoveredMessage);
+                signer.Init(false, rsaKeyParameters);
 
+                signer.UpdateWithRecoveredMessage(ticket.Tag7F21ValueData);
+                byte[] recoveredMessage = signer.GetRecoveredMessage();
 
-                    }
-                    catch (CryptographicException cryptoEx)
-                    {
-                        Console.WriteLine($"Decryption failed. Details: {cryptoEx.Message}");
-                        return;
-                    }
-                    catch (NotSupportedException notSuppEx)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"Operation not supported. Details: {notSuppEx.Message}");
-                        Console.ResetColor();
-                        return;
-                    }
+                Console.WriteLine("Recovered message: " + System.Text.Encoding.UTF8.GetString(recoveredMessage));
 
-                    // Output decrypted data
-                    if(decryptedData != null)
-                    {
-                        string decryptedText = Encoding.UTF8.GetString(decryptedData);
-                        Console.WriteLine($"Decrypted Text: {decryptedText}");
-                    }   
-                }
-                else
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"No Public Key found for: {fileNames[currentItteration]}.pem");
-                    Console.ResetColor();
-                }
-                currentItteration++;
             }
-           
+            catch (Exception e)
+            {
+                Console.WriteLine("An error occurred: " + e.Message );
+            }
+
         }
+
+
+
 
         public byte[] GetDecryptedData(VDVSignedTicket vdvTicket)
         {
