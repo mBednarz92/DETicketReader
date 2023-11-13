@@ -22,6 +22,7 @@ using Org.BouncyCastle.Security;
 using Org.BouncyCastle.Utilities.IO.Pem;
 using Org.BouncyCastle.X509;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using static Org.BouncyCastle.Crypto.Engines.SM2Engine;
 using PemReader = Org.BouncyCastle.OpenSsl.PemReader;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
@@ -34,8 +35,8 @@ namespace DETicketReader
         private string fileNames;
         string caCertificateFilePath;
 
-        
-        
+
+
 
         void DecryptData(VDVSignedTicket ticket)
         {
@@ -72,39 +73,41 @@ namespace DETicketReader
                     Console.Write($"{b:X2} ");
                 }
 
-                
+                byte[] caCertBytes = caCertificateBytes;
+                byte[] cvCertBytes = ticket.Tag7F21ValueData.ToArray();
 
-                // Assuming it's an RSA public key
-                
+                RsaKeyParameters publicKey = (RsaKeyParameters)PublicKeyFactory.CreateKey(caCertificateBytes);
 
-                VdvCertificate vdvCertificate = new VdvCertificate(caCertificateBytes);
 
-                Console.WriteLine(vdvCertificate.GetModulus());
-                Console.WriteLine(vdvCertificate.GetExponent());
+                ISigner signer = SignerUtilities.GetSigner("ISO9796-2");
 
-                RsaKeyParameters rsaKeyParameters = new RsaKeyParameters(
-                    false,
-                    vdvCertificate.GetModulus(),
-                    vdvCertificate.GetExponent()
-                );
+                // Initialize the signer for verification (to recover the message)
+                signer.Init(false, publicKey);
 
-                // Create the signer with ISO9796-2 scheme
-                var signer = new Iso9796d2Signer(new RsaEngine(), new Sha1Digest(), true);
+                signer.BlockUpdate(cvCertBytes, 0, cvCertBytes.Length);
 
-                signer.Init(false, rsaKeyParameters);
 
-                signer.UpdateWithRecoveredMessage(ticket.Tag7F21ValueData);
-                byte[] recoveredMessage = signer.GetRecoveredMessage();
+                // Verify the signature and try to recover the message
+                byte[] recoveredMessage;
+   
+                if (signer.VerifySignature(cvCertBytes))
+                {
+                    // Recover the message from the signature
+                    recoveredMessage = signer.GenerateSignature();
+                    // Continue processing with the recovered message...
+                }
+                else
+                {
+                    Console.WriteLine("Failed to verify the signature.");
+                }
 
-                Console.WriteLine("Recovered message: " + System.Text.Encoding.UTF8.GetString(recoveredMessage));
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("An error occurred: " + e.Message);
+                }
 
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("An error occurred: " + e.Message );
-            }
-
-        }
+            } 
 
 
 
